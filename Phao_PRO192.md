@@ -36,6 +36,7 @@
 17. [Case Cookbook – code theo từng tình huống](#46-class--full-code-cho-từng-case)
 18. [Bổ sung biến thể kế thừa và kiểm tra cú pháp](#58-bổ-sung-biến-thể-kế-thừa-và-kiểm-tra-cú-pháp)
 19. [Độ dài chuỗi – toàn bộ thao tác](#59-độ-dài-chuỗi-string-length--toàn-bộ-thao-tác)
+20. [String – atlas toàn bộ method](#60-string--atlas-toàn-bộ-method)
 
 ---
 
@@ -9088,3 +9089,642 @@ Ba câu tự hỏi trước khi kết thúc mỗi method có `length()`:
 1. Chuỗi này **có thể rỗng** không? Nếu có, `charAt` và `substring` cần guard.
 2. Chuỗi này **có thể null** không? Nếu có, kiểm tra `null` trước.
 3. Tôi đang lấy độ dài của **String, mảng hay List**? Mỗi kiểu có cú pháp riêng và không thay thế cho nhau được.
+
+---
+
+# 60. STRING – ATLAS TOÀN BỘ METHOD
+
+> Mục này liệt kê **tất cả** method của `java.lang.String` trong Java 8, kèm kết quả thật đã chạy trên JDK 1.8.0_504. Dùng khi đề gọi tên một thao tác mà bạn không chắc method nào: tra ở 60.0 (bảng tổng) hoặc 60.15 (cụm tiếng Anh → method), rồi sang mục chi tiết để xem output/edge case.
+>
+> **Nhắc lại quy tắc gọi method:** `toUpperCase`, `toLowerCase`, `trim`, `indexOf`… đều là **method**, nên phải có ngoặc — viết `s.toUpperCase()`, không phải `s.toUpperCase`. Thiếu ngoặc là lỗi compile, trừ khi bạn cố ý dùng method reference `String::toUpperCase`.
+
+## 60.0. Bảng tổng: toàn bộ method `String` theo nhóm
+
+| Nhóm | Method | Trả về |
+|---|---|---|
+| Khảo sát | `length()`, `isEmpty()` | `int`, `boolean` |
+| Truy cập ký tự | `charAt(i)`, `subSequence(b,e)`, `getChars(b,e,dst,dstBegin)` | `char`, `CharSequence`, `void` |
+| Cắt chuỗi | `substring(b)`, `substring(b,e)`, `split(regex)`, `split(regex,limit)` | `String`, `String[]` |
+| Tìm kiếm | `indexOf(...)` ×4, `lastIndexOf(...)` ×4, `contains(s)`, `startsWith(...)` ×2, `endsWith(s)` | `int` / `boolean` |
+| So sánh | `equals(o)`, `equalsIgnoreCase(s)`, `compareTo(s)`, `compareToIgnoreCase(s)`, `regionMatches(...)` ×2, `contentEquals(...)` ×2 | `boolean` / `int` |
+| Biến đổi | `toUpperCase()`, `toUpperCase(locale)`, `toLowerCase()`, `toLowerCase(locale)`, `trim()`, `replace(char,char)`, `replace(cs,cs)`, `replaceAll(rx,repl)`, `replaceFirst(rx,repl)`, `concat(s)` | `String` (mới) |
+| Regex | `matches(regex)` | `boolean` |
+| Chuyển kiểu | `toCharArray()`, `getBytes()`, `getBytes(charset)`, `valueOf(...)` ×9, `copyValueOf(...)` ×2 | `char[]`, `byte[]`, `String` |
+| Static tiện ích | `String.format(...)`, `String.join(delim, ...)` | `String` |
+| Unicode | `chars()`, `codePoints()`, `codePointAt(i)`, `codePointBefore(i)`, `codePointCount(b,e)`, `offsetByCodePoints(i,n)` | `IntStream` / `int` |
+| Định danh | `intern()`, `hashCode()`, `toString()` | `String` / `int` / `String` |
+
+Ghi nhớ nhanh: **mọi method biến đổi đều trả `String` mới**; `String` không có method nào sửa tại chỗ. Muốn sửa tại chỗ, dùng `StringBuilder` (mục 11.6 và 18).
+
+## 60.1. Khởi tạo và khảo sát cơ bản
+
+| Cách viết | Kết quả |
+|---|---|
+| `new String()` | `""` (rỗng, `length() == 0`) |
+| `"Java".length()` | `4` |
+| `"".isEmpty()` | `true` |
+| `" ".isEmpty()` | `false` |
+| `"  abc  ".length()` | `7` |
+
+```java
+String s1 = "Java";           // string literal, nằm trong pool
+String s2 = new String("Java"); // object mới, ngoài pool
+int n = s1.length();          // 4
+
+boolean e1 = "".isEmpty();    // true
+boolean e2 = " ".isEmpty();   // false  -> space vẫn là ký tự
+```
+
+`isEmpty()` chỉ đúng nghĩa "độ dài bằng 0". Muốn hỏi "chỉ toàn khoảng trắng" thì phải `s.trim().isEmpty()`; Java 8 **không có** `isBlank()` (Java 11 mới có).
+
+## 60.2. Truy cập ký tự: `charAt`, `subSequence`, `getChars`
+
+```java
+"Java".charAt(0);                    // 'J'
+"Java".charAt(3);                    // 'a'
+"Java".charAt("Java".length() - 1);  // 'a'  -> ký tự cuối, luôn dùng length() - 1
+"Java".subSequence(1, 3).toString(); // "av" -> giống substring(1, 3)
+
+char[] dst = new char[10];
+"abcdef".getChars(0, 6, dst, 2);     // copy "abcdef" vào dst bắt đầu từ index 2
+```
+
+| Gọi | Hợp lệ khi | Sai thì ném |
+|---|---|---|
+| `charAt(i)` | `0 <= i < length()` | `StringIndexOutOfBoundsException` |
+| `subSequence(b, e)` | `0 <= b <= e <= length()` | `StringIndexOutOfBoundsException` |
+| `getChars(b, e, dst, k)` | `b`, `e` trong biên; `dst` đủ chỗ cho `e - b` ký tự | `StringIndexOutOfBoundsException` (biên chuỗi) hoặc `ArrayIndexOutOfBoundsException` (mảng đích thiếu chỗ) |
+
+`subSequence()` trả `CharSequence`, không trả `String`. Muốn gán vào `String` phải `.toString()`; nếu không, dùng `substring()` luôn cho gọn.
+
+## 60.3. Cắt chuỗi: `substring`, `split`
+
+```java
+"Java".substring(2);      // "va"   -> từ index 2 đến hết
+"Java".substring(0, 2);   // "Ja"   -> [0, 2)
+"Java".substring(1, 3);   // "av"
+"Java".substring(4);      // ""     -> index == length() hợp lệ
+"Java".substring(2, 2);   // ""     -> begin == end hợp lệ
+```
+
+**`substring(b, e)` lấy `e` exclusive.** Đây là lỗi mất điểm số một của phần String.
+
+| Gọi trên `"abc"` | Kết quả |
+|---|---|
+| `substring(4)` | `StringIndexOutOfBoundsException` |
+| `substring(2, 1)` | `StringIndexOutOfBoundsException` |
+| `substring(-1)` | `StringIndexOutOfBoundsException` |
+
+`split` đầy đủ — bảng này đã chạy thật, chép nguyên kết quả:
+
+| Gọi | Kết quả |
+|---|---|
+| `"a,b,c".split(",")` | `["a", "b", "c"]`, length `3` |
+| `"a,b,c".split(",", 2)` | `["a", "b,c"]` — chỉ tách tối đa `limit - 1` lần |
+| `"a  b".split(" ")` | `["a", "", "b"]` — 2 space liền tạo phần tử rỗng |
+| `"a  b".split("\\s+")` | `["a", "b"]` — gộp mọi khoảng trắng |
+| `"a.b.c".split("\\.")` | `["a", "b", "c"]` |
+| `"a.b.c".split(".")` | length `0` — dấu `.` là regex "mọi ký tự" |
+| `"a,b,c,,".split(",")` | `["a", "b", "c"]` — phần tử rỗng cuối bị bỏ |
+| `"a,b,c,,".split(",", -1)` | `["a", "b", "c", "", ""]` — `-1` giữ lại |
+| `"abc".split("")` | `["a", "b", "c"]`, length `3` |
+| `"abc".split("", -1)` | `["a", "b", "c", ""]`, length `4` |
+| `"".split(",")` | length `1` — mảng chứa một chuỗi rỗng |
+| `"".split("")` | length `1` |
+
+Hai hệ quả hay quên:
+
+1. `"".split(",").length == 1`, nên đếm từ phải guard `s.trim().isEmpty()` trước.
+2. `split` nhận **regex**, không nhận ký tự. Các ký tự phải escape: `.` `|` `+` `*` `?` `(` `)` `[` `]` `{` `}` `^` `$` `\`. Cách an toàn nhất: `split(Pattern.quote("."))`.
+
+## 60.4. Tìm kiếm: `indexOf`, `lastIndexOf`, `contains`, `startsWith`, `endsWith`
+
+```java
+"banana".indexOf('a');        // 1  -> lần xuất hiện đầu
+"banana".indexOf('a', 2);     // 3  -> tìm từ index 2
+"banana".indexOf("na");       // 2
+"banana".indexOf("na", 3);    // 4
+"banana".indexOf("xy");       // -1 -> không thấy
+
+"banana".lastIndexOf('a');    // 5  -> lần xuất hiện cuối
+"banana".lastIndexOf('a', 4); // 3  -> tìm ngược từ index 4
+"banana".lastIndexOf("na");   // 4
+"banana".lastIndexOf("na", 3);// 2
+
+"Java".contains("av");        // true
+"Java".startsWith("Ja");      // true
+"Java".startsWith("va", 2);   // true  -> so từ offset 2
+"Java".endsWith("va");        // true
+```
+
+| Điểm dễ sai | Thực tế |
+|---|---|
+| `indexOf` trả `0` khi tìm thấy ở đầu | `0` là **hợp lệ**, phải so `!= -1`, không so `> 0` |
+| `lastIndexOf(x, from)` | Tìm **ngược** bắt đầu từ `from`, không phải "tìm `x` ở vị trí `from`" |
+| `from` vượt biên | `indexOf('a', 10)` trên `"abc"` → `-1`; `lastIndexOf('a', 10)` → `0`; không ném lỗi |
+| `from` âm | `indexOf('a', -5)` → như `from = 0`; `lastIndexOf('a', -1)` → `-1` |
+| Tìm chuỗi rỗng | `"abc".indexOf("")` → `0`; `"abc".lastIndexOf("")` → `3`; `"abc".contains("")` → `true` |
+| Đối số `int` | `"a1b".indexOf(49)` tương đương `indexOf('1')` → `1` (int được hiểu là code point) |
+
+Mẫu đếm số lần xuất hiện **không chồng lấn**:
+
+```java
+public int countOccurrences(String s, String target) {
+    if (s == null || target == null || target.isEmpty()) {
+        return 0;
+    }
+    int count = 0;
+    int pos = 0;
+    while ((pos = s.indexOf(target, pos)) != -1) {
+        count++;
+        pos += target.length();
+    }
+    return count;
+}
+```
+
+`countOccurrences("aaaa", "aa")` → `2`. Muốn đếm cả lần chồng lấn thì đổi dòng cuối thành `pos++` → `3`.
+
+## 60.5. So sánh: `equals`, `compareTo`, `regionMatches`, `contentEquals`
+
+```java
+"abc".equals("abc");              // true
+"abc".equals("ABC");              // false
+"abc".equals(null);               // false   -> KHÔNG ném lỗi
+"abc".equalsIgnoreCase("ABC");    // true
+"abc".equalsIgnoreCase(null);     // false   -> KHÔNG ném lỗi
+```
+
+`equals` và `equalsIgnoreCase` chấp nhận `null` và trả `false`. Đó là lý do luôn viết `"literal".equals(bien)` thay vì `bien.equals("literal")`.
+
+`compareTo` — chỉ đọc **dấu**, đừng đọc giá trị tuyệt đối:
+
+| Gọi | Kết quả | Ý nghĩa |
+|---|---|---|
+| `"apple".compareTo("banana")` | `-1` | `apple` đứng trước |
+| `"banana".compareTo("apple")` | `1` | đứng sau |
+| `"abc".compareTo("abc")` | `0` | bằng nhau |
+| `"Apple".compareTo("apple")` | `-32` | chữ hoa đứng trước chữ thường |
+| `"a".compareTo("ab")` | `-1` | chuỗi ngắn hơn đứng trước khi là tiền tố |
+| `"10".compareTo("9")` | `-8` | so **ký tự**, nên "10" < "9" |
+| `"apple".compareToIgnoreCase("APPLE")` | `0` | bỏ qua hoa/thường |
+
+`compareTo(null)` → `NullPointerException`, khác hẳn `equals(null)`.
+
+```java
+"abcdef".regionMatches(1, "bcd", 0, 3);              // true  -> so 3 ký tự
+"ABCDEF".regionMatches(true, 1, "bcd", 0, 3);        // true  -> ignoreCase
+"abc".regionMatches(2, "cde", 0, 3);                 // false -> thiếu ký tự
+"abc".contentEquals("abc");                          // true
+"abc".contentEquals(new StringBuilder("abc"));       // true  -> nhận CharSequence
+```
+
+`regionMatches` trả `false` (không ném lỗi) khi đoạn so sánh vượt quá độ dài — an toàn hơn `substring` rồi `equals`.
+
+`hashCode()` — công thức `s[0]*31^(n-1) + ... + s[n-1]`:
+
+| Gọi | Kết quả |
+|---|---|
+| `"".hashCode()` | `0` |
+| `"a".hashCode()` | `97` |
+| `"abc".hashCode()` | `96354` |
+
+Đề hầu như không hỏi `hashCode`; chỉ cần biết nó tồn tại và **không** dùng để so nội dung.
+
+## 60.6. Biến đổi: hoa/thường, `trim`, `replace`, `concat`
+
+```java
+"aBc".toUpperCase();      // "ABC"
+"aBc".toLowerCase();      // "abc"
+"  abc  ".trim();         // "abc"
+"  abc  ".trim().length();// 3
+
+"a-b-c".replace('-', '_');   // "a_b_c"  -> overload char
+"a-b-c".replace("-", "+");   // "a+b+c"  -> overload CharSequence
+"aaa".replace("aa", "b");    // "ba"     -> thay TẤT CẢ, không chồng lấn
+"abc".replace("x", "y");     // "abc"    -> không khớp thì trả nguyên chuỗi
+"abc".replace("", "-");      // "-a-b-c-" -> chuỗi rỗng khớp ở mọi khe
+"abc".concat("def");         // "abcdef"
+```
+
+Bảng phân biệt 4 method replace — hay bị hỏi và hay bị chọn sai:
+
+| Method | Nhận | Có regex? | Ví dụ |
+|---|---|---|---|
+| `replace(char, char)` | ký tự | không | `"a-b".replace('-','_')` → `"a_b"` |
+| `replace(cs, cs)` | chuỗi con literal | **không** | `"a.b".replace(".","#")` → `"a#b"` |
+| `replaceAll(rx, repl)` | regex | **có** | `"a.b".replaceAll(".","#")` → `"###"` |
+| `replaceFirst(rx, repl)` | regex | **có** | `"a1b2".replaceFirst("\\d","#")` → `"a#b2"` |
+
+Đây là bẫy kinh điển: `replace(".", "#")` thay **dấu chấm**; `replaceAll(".", "#")` thay **mọi ký tự** vì `.` là regex. Muốn dùng regex mà thay dấu chấm thật: `replaceAll("\\.", "#")`.
+
+```java
+"a1b2".replaceAll("\\d", "#");   // "a#b#"
+"a.b".replaceAll(".", "#");      // "###"
+"a.b".replaceAll("\\.", "#");    // "a#b"
+"abab".replaceAll("(a)(b)", "$2$1"); // "baba" -> dùng group $1, $2
+```
+
+Trong `replaceAll`, `repl` cũng có ký tự đặc biệt: `$` là group, `\` là escape. Muốn thay bằng chuỗi chứa `$` thì phải `\$`.
+
+Ngoại lệ Unicode của `toUpperCase`/`toLowerCase` — đổi hoa/thường **có thể đổi độ dài**:
+
+| Gọi | Kết quả | `length()` |
+|---|---|---|
+| `"ß".toUpperCase()` | `"SS"` | 1 → 2 |
+| `"İ".toLowerCase()` | `"i" + U+0307` | 1 → 2 |
+| `"i".toUpperCase(new Locale("tr","TR"))` | `"İ"` | theo locale Thổ Nhĩ Kỳ |
+
+Vì vậy đừng bao giờ giả định `s.toUpperCase().length() == s.length()`.
+
+`trim()` chỉ bỏ ký tự **≤ U+0020** ở hai đầu. Nó không bỏ NBSP (`\u00A0`): `"\u00A0a".trim().length()` → `2`. Java 8 không có `strip()`; nếu đề có dữ liệu NBSP thì phải `replace("\u00A0", " ")` rồi mới `trim()`.
+
+## 60.7. Regex: `matches`
+
+```java
+"123".matches("\\d+");       // true
+"12a".matches("\\d+");       // false
+"abc".matches("[A-Za-z]+");  // true
+"a1".matches(".*[0-9].*");   // true
+"Java".matches("[A-Z][a-z]*"); // true
+"a.b".matches("a\\.b");      // true  -> escape dấu chấm
+"axb".matches("a.b");        // true  -> '.' là mọi ký tự
+```
+
+**`matches()` yêu cầu khớp toàn bộ chuỗi**, không phải tìm một phần. Vì vậy "chứa chữ số" phải viết `.*[0-9].*`, không phải `[0-9]`.
+
+| Muốn kiểm tra | Regex |
+|---|---|
+| chỉ chữ số | `"[0-9]+"` hoặc `"\\d+"` |
+| chứa ít nhất 1 chữ số | `".*[0-9].*"` |
+| chỉ chữ cái ASCII | `"[A-Za-z]+"` |
+| chữ cái hoặc số | `"[A-Za-z0-9]+"` |
+| đúng 3 ký tự | `".{3}"` |
+| viết hoa chữ đầu | `"[A-Z][a-z]*"` |
+| đúng 2 chữ số thập phân | `"\\d+\\.\\d{2}"` |
+
+## 60.8. Chuyển kiểu: `toCharArray`, `getBytes`, `valueOf`, `copyValueOf`
+
+```java
+char[] chars = "abc".toCharArray();   // ['a','b','c'], chars.length == 3
+
+byte[] bytes = "abc".getBytes(StandardCharsets.UTF_8); // length 3
+int vn = "ế".length();                                 // 1
+int vnBytes = "ế".getBytes(StandardCharsets.UTF_8).length; // 3
+```
+
+`s.length()` đếm UTF-16 code unit; `getBytes()` đếm byte. Với chữ Latin không dấu, hai số bằng nhau. Với tiếng Việt có dấu, byte nhiều hơn.
+
+**Không dùng `getBytes()` không tham số** cho dữ liệu tiếng Việt: nó dùng charset mặc định của máy (ở máy chạy thử là `windows-1252`), kết quả phụ thuộc môi trường. Luôn truyền `StandardCharsets.UTF_8`.
+
+| Gọi | Kết quả |
+|---|---|
+| `String.valueOf(123)` | `"123"` |
+| `String.valueOf(-7)` | `"-7"` (dấu `-` là một ký tự) |
+| `String.valueOf(1.5)` | `"1.5"` |
+| `String.valueOf(3.0)` | `"3.0"` |
+| `String.valueOf(0.1 + 0.2)` | `"0.30000000000000004"` |
+| `String.valueOf('a')` | `"a"` |
+| `String.valueOf(true)` | `"true"` |
+| `String.valueOf(new char[]{'a','b'})` | `"ab"` |
+| `String.valueOf((Object) null)` | `"null"` (chuỗi 4 ký tự) |
+| `String.valueOf((char[]) null)` | `NullPointerException` |
+| `String.copyValueOf(new char[]{'j','a','v','a'})` | `"java"` |
+| `String.copyValueOf(new char[]{'x','y','z'}, 1, 2)` | `"yz"` |
+
+Lưu ý `String.valueOf(0.1 + 0.2)` cho `"0.30000000000000004"`. Khi đề yêu cầu format số thực, dùng `String.format("%.2f", x)`, không dùng `valueOf`.
+
+Nối chuỗi bằng `+` — quy tắc đánh giá trái sang phải:
+
+```java
+1 + 2 + "x" + 1 + 2;  // "3x12"  -> cộng số trước, gặp String thì nối
+"x" + 1 + 2;          // "x12"   -> đã là String nên 1 và 2 bị nối, không cộng
+"" + 'a';             // "a"
+'a' + 1;              // 98      -> char + int là số học
+```
+
+## 60.9. Static tiện ích: `String.format`, `String.join`
+
+```java
+String.format("%.2f", 7.456);   // "7.46"
+String.format("%d", 42);        // "42"
+String.format("%5d|", 42);      // "   42|"
+String.format("%-5d|", 42);     // "42   |"
+String.format("%-6s|", "abc");  // "abc   |"
+String.format("%05d", 42);      // "00042"
+String.format("%.3s", "abcdef");// "abc"   -> cắt còn 3 ký tự
+String.format("%s", (Object) null); // "null"
+
+String.join("-", "a", "b", "c");          // "a-b-c"
+String.join(", ", list);                  // "x, y"
+String.join("-", new String[0]);          // ""
+String.join("-", "a", null, "b");         // "a-null-b"
+```
+
+Bảng specifier thường dùng:
+
+| Specifier | Ý nghĩa | Ví dụ |
+|---|---|---|
+| `%d` | số nguyên | `42` |
+| `%f` | số thực (mặc định 6 chữ số thập phân) | `1.500000` |
+| `%.2f` | 2 chữ số thập phân, có làm tròn | `3.14159` → `3.14` |
+| `%s` | chuỗi (gọi `toString`) | `42` → `"42"` |
+| `%c` | ký tự | `'A'` |
+| `%b` | boolean | `true` |
+| `%n` | xuống dòng hệ điều hành | |
+| `%5d` / `%-5d` | canh phải / canh trái, rộng 5 | |
+| `%05d` | đệm `0` bên trái | `00042` |
+| `%,d` | phân cách hàng nghìn | `1,234,567` |
+
+Ba cẩn thận về `String.format`:
+
+1. `%f` mặc định in **6** chữ số thập phân. Đề nói "two decimal places" phải dùng `%.2f`.
+2. `%Ns` **không** cắt chuỗi dài; nó in tràn ra ngoài. Chỉ `%.Ns` mới cắt. Muốn "exactly N characters" phải cắt trước rồi mới đệm (mục 59.5).
+3. `%d` không nhận `double` — truyền `double` vào sẽ ném `IllegalFormatConversionException` lúc chạy; phải cast `(int) x` trước.
+
+## 60.10. Unicode: code point và stream
+
+```java
+String emoji = "😀";
+
+emoji.length();                          // 2  -> cặp surrogate, KHÔNG phải 1
+emoji.codePointCount(0, emoji.length());// 1
+emoji.codePointAt(0);                    // 128512
+("😀a").offsetByCodePoints(0, 1);        // 2  -> vượt qua 1 code point
+
+"Java".chars().count();                  // 4
+"abc".codePoints().sum();                // 294  -> tổng mã ASCII
+"Hello".codePointBefore(1);              // 72 ('H')
+```
+
+| API | Đếm / lấy gì |
+|---|---|
+| `length()` | UTF-16 code unit |
+| `codePointCount(b, e)` | số code point thật |
+| `codePointAt(i)` | code point bắt đầu tại `i` |
+| `codePointBefore(i)` | code point kết thúc ngay trước `i` |
+| `offsetByCodePoints(i, n)` | index sau khi nhảy `n` code point |
+| `chars()` | `IntStream` các code unit |
+| `codePoints()` | `IntStream` các code point |
+
+Duyệt theo code point (Java 8, không dùng được `for-each`):
+
+```java
+for (int i = 0; i < s.length(); ) {
+    int cp = s.codePointAt(i);
+    // xử lý cp
+    i += Character.charCount(cp);
+}
+```
+
+Với đề PRO192 dùng chữ Latin, `length()` là đủ. Phần này chỉ cần khi đề nhắc "emoji", "Unicode" hoặc "code points".
+
+## 60.11. Khởi tạo nâng cao, `intern`, thứ tự không phân biệt hoa thường
+
+```java
+new String();                                  // ""
+new String(new char[]{'a','b','c'}, 1, 2);     // "bc"
+new String(new byte[]{65, 66});                // "AB"
+new String(new byte[]{65, 66}, StandardCharsets.UTF_8); // "AB"
+new String(new int[]{65, 66}, 0, 2);           // "AB"  -> từ code point
+new String(new StringBuilder("sb"));           // "sb"
+new String("x") == "x";                        // false -> object mới
+new String("x").intern() == "x";               // true  -> vào pool
+```
+
+`new String(...)` luôn tạo object mới; so bằng `==` với literal sẽ ra `false`. Chỉ dùng `==` khi đề hỏi rõ về identity/pool — còn lại luôn dùng `equals()`.
+
+Sắp xếp không phân biệt hoa thường:
+
+```java
+String[] arr = {"banana", "Apple", "cherry"};
+Arrays.sort(arr, String.CASE_INSENSITIVE_ORDER);  // [Apple, banana, cherry]
+
+String[] arr2 = {"b", "A", "c", "a"};
+Arrays.sort(arr2);                                 // [A, a, b, c] -> mã ASCII
+```
+
+## 60.12. Bảng lỗi runtime — method nào ném gì
+
+| Gọi | Ném |
+|---|---|
+| `"abc".charAt(3)`, `charAt(-1)` | `StringIndexOutOfBoundsException` |
+| `"abc".substring(4)`, `substring(-1)`, `substring(2, 1)` | `StringIndexOutOfBoundsException` |
+| `"abc".codePointBefore(0)` | `StringIndexOutOfBoundsException` |
+| `"abc".codePointAt(3)` | `StringIndexOutOfBoundsException` |
+| `"abc".subSequence(4, 4)`, `subSequence(2, 1)` | `StringIndexOutOfBoundsException` |
+| `"abc".codePointCount(0, 4)` | `IndexOutOfBoundsException` |
+| `"abc".offsetByCodePoints(0, 10)`, `offsetByCodePoints(-1, 0)` | `IndexOutOfBoundsException` |
+| `"abc".concat(null)` | `NullPointerException` |
+| `"abc".startsWith(null)` / `endsWith(null)` / `contains(null)` | `NullPointerException` |
+| `"abc".compareTo(null)` | `NullPointerException` |
+| `"abc".contentEquals(null)` | `NullPointerException` |
+| `"abc".split(null)` | `NullPointerException` |
+| `String.join(null, "a", "b")` | `NullPointerException` |
+| `String.valueOf((char[]) null)` | `NullPointerException` |
+| `"abc".equals(null)` | **không ném** — trả `false` |
+| `"abc".equalsIgnoreCase(null)` | **không ném** — trả `false` |
+| `s.length()` khi `s == null` | `NullPointerException` |
+
+Quy tắc rút ra: `equals`/`equalsIgnoreCase` an toàn với `null`; mọi method khác thì không. Đặt literal bên trái khi so sánh.
+
+## 60.13. Method `String` **KHÔNG** có (bẫy thường gặp)
+
+Các method sau **không tồn tại** trên `String` trong Java 8 — gọi là lỗi compile, không phải lỗi logic:
+
+| Viết sai | Đúng |
+|---|---|
+| `s.reverse()` | `new StringBuilder(s).reverse().toString()` |
+| `s.isBlank()` | `s.trim().isEmpty()` (Java 11 mới có `isBlank`) |
+| `s.strip()` | `s.trim()` |
+| `s.repeat(n)` | vòng lặp `sb.append(s)` (Java 11 mới có `repeat`) |
+| `s.charAt(i) = 'x'` | `s = s.substring(0, i) + 'x' + s.substring(i + 1)` |
+| `s.append(x)` | `s += x` hoặc dùng `StringBuilder` |
+| `s.insert(i, x)` | dùng `StringBuilder` |
+| `s.deleteCharAt(i)` | dùng `StringBuilder` |
+| `s.sort()` | `char[] c = s.toCharArray(); Arrays.sort(c); new String(c)` |
+| `s.length` | `s.length()` — có ngoặc |
+| `s.size()` | `s.length()` — `size()` là của `List` |
+| `s.subString(1)` | `s.substring(1)` — chữ `S` hoa |
+| `s.indexOf('a', 'b')` | Chạy được và **rất dễ sai**: `'b'` bị widen thành `98`, tức là `indexOf('a', 98)`. Muốn tìm vị trí phải truyền `int`: `s.indexOf('a', 2)` |
+
+Đảo chuỗi là thao tác hay bị hỏi nhất và `String` không có `reverse()`:
+
+```java
+public String reverse(String s) {
+    if (s == null) {
+        return null;
+    }
+    return new StringBuilder(s).reverse().toString();
+}
+```
+
+## 60.14. Recipe hoàn chỉnh — 6 dạng hay ra thi
+
+### Recipe A — đếm từ, an toàn với chuỗi rỗng
+
+```java
+public int countWords(String s) {
+    if (s == null || s.trim().isEmpty()) {
+        return 0;
+    }
+    return s.trim().split("\\s+").length;
+}
+```
+
+`countWords("  Hello   World  ")` → `2`; `countWords("   ")` → `0`.
+
+### Recipe B — viết hoa chữ đầu mỗi từ, phần còn lại thường
+
+```java
+public String titleCase(String s) {
+    if (s == null || s.trim().isEmpty()) {
+        return s;
+    }
+    String[] words = s.trim().split("\\s+");
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < words.length; i++) {
+        if (i > 0) {
+            sb.append(' ');
+        }
+        String w = words[i].toLowerCase();
+        sb.append(w.substring(0, 1).toUpperCase()).append(w.substring(1));
+    }
+    return sb.toString();
+}
+```
+
+`titleCase("hello world")` → `"Hello World"`. Điều kiện `i > 0` để không có space thừa ở đầu.
+
+### Recipe C — thay ký tự cách cuối `k` bước
+
+```java
+public String replaceSecondLast(String s, char c) {
+    if (s == null || s.length() < 2) {
+        return s;
+    }
+    int i = s.length() - 2;
+    return s.substring(0, i) + c + s.substring(i + 1);
+}
+```
+
+`replaceSecondLast("abcde", 'X')` → `"abcXe"`. Công thức chung: `index = s.length() - 1 - k`, guard `s.length() > k`.
+
+### Recipe D — lấy `n` ký tự cuối, không lỗi khi chuỗi ngắn
+
+```java
+public String keepLastN(String s, int n) {
+    if (s == null || n <= 0) {
+        return "";
+    }
+    if (n >= s.length()) {
+        return s;
+    }
+    return s.substring(s.length() - n);
+}
+```
+
+`keepLastN("abcdef", 2)` → `"ef"`; `keepLastN("abc", 10)` → `"abc"` (không ném lỗi).
+
+### Recipe E — lọc chỉ giữ chữ cái
+
+```java
+public String onlyLetters(String s) {
+    if (s == null) {
+        return "";
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < s.length(); i++) {
+        char c = s.charAt(i);
+        if (Character.isLetter(c)) {
+            sb.append(c);
+        }
+    }
+    return sb.toString();
+}
+```
+
+`onlyLetters("ab1c2")` → `"abc"`. Đổi `isLetter` thành `isDigit` / `isUpperCase` / `isLowerCase` để có biến thể khác.
+
+### Recipe F — acronym từ chữ đầu mỗi từ
+
+```java
+public String initials(String s) {
+    if (s == null || s.trim().isEmpty()) {
+        return "";
+    }
+    String[] words = s.trim().split("\\s+");
+    StringBuilder sb = new StringBuilder();
+    for (String w : words) {
+        sb.append(Character.toUpperCase(w.charAt(0)));
+    }
+    return sb.toString();
+}
+```
+
+`initials("Java pro 192 exam")` → `"JP1E"`.
+
+## 60.15. Bảng tra nhanh: cụm tiếng Anh → method
+
+| Cụm trong đề | Method |
+|---|---|
+| convert to upper case / uppercase | `s.toUpperCase()` |
+| lowercase / to lower case | `s.toLowerCase()` |
+| the length of | `s.length()` |
+| character at position i | `s.charAt(i)` |
+| first character | `s.charAt(0)` |
+| last character | `s.charAt(s.length() - 1)` |
+| remove leading/trailing spaces | `s.trim()` |
+| remove the first character | `s.substring(1)` |
+| remove the last character | `s.substring(0, s.length() - 1)` |
+| first n characters | `s.substring(0, n)` |
+| last n characters | `s.substring(s.length() - n)` |
+| from position i to the end | `s.substring(i)` |
+| between i and j | `s.substring(i, j)` |
+| replace all occurrences of X | `s.replace(x, y)` (literal) / `s.replaceAll(rx, repl)` (regex) |
+| replace the first occurrence | `s.replaceFirst(rx, repl)` |
+| find the position of | `s.indexOf(...)` / `s.lastIndexOf(...)` |
+| does it contain | `s.contains(x)` |
+| starts with / begins with | `s.startsWith(x)` |
+| ends with | `s.endsWith(x)` |
+| compare / is equal to | `s.equals(x)` / `s.compareTo(x)` |
+| ignoring case | `equalsIgnoreCase` / `compareToIgnoreCase` |
+| split by comma | `s.split(",")` |
+| split by whitespace | `s.trim().split("\\s+")` |
+| count the words | `s.trim().split("\\s+").length` |
+| concatenate / append | `s.concat(x)` hoặc `s + x` |
+| matches the pattern / valid format | `s.matches(regex)` |
+| convert to char array | `s.toCharArray()` |
+| convert to a String | `String.valueOf(x)` |
+| format with two decimal places | `String.format("%.2f", x)` |
+| join with a comma | `String.join(", ", list)` |
+| reverse | `new StringBuilder(s).reverse().toString()` |
+| alphabetically / lexicographical | `compareTo` / `Arrays.sort` |
+
+## 60.16. Checklist String trước khi nộp
+
+| Kiểm tra | Đúng | Sai |
+|---|---|---|
+| Gọi method | `s.toUpperCase()` | `s.toUpperCase` |
+| Lấy độ dài | `s.length()` | `s.length` |
+| Index ký tự cuối | `s.length() - 1` | `s.length()` |
+| `substring` | `end` exclusive | tính `end` inclusive |
+| So nội dung | `s.equals(t)` | `s == t` |
+| So với literal | `"abc".equals(s)` | `s.equals("abc")` khi `s` có thể null |
+| Tìm vị trí không thấy | so `!= -1` | so `> 0` |
+| Tách theo dấu chấm | `split("\\.")` | `split(".")` |
+| Thay literal có dấu chấm | `replace(".", x)` | `replaceAll(".", x)` |
+| Kiểm tra "chỉ toàn space" | `trim().isEmpty()` | `isEmpty()` |
+| Chuỗi rỗng trước `charAt`/`substring` | guard `length() > 0` | gọi trực tiếp |
+| Đảo chuỗi | `StringBuilder.reverse()` | `s.reverse()` |
+| Format 2 chữ số thập phân | `"%.2f"` | `"%f"` |
+| Cắt đúng N ký tự | `%.Ns` hoặc `substring` | `%Ns` |
+| Đếm từ với chuỗi rỗng | guard `trim().isEmpty()` | `.length` trực tiếp |
+| Số âm khi đếm chữ số | `Math.abs(n)` | `String.valueOf(n).length()` (tính cả `-`) |
+| Byte của tiếng Việt | `getBytes(StandardCharsets.UTF_8)` | `getBytes()` không tham số |
+
+Ba câu tự hỏi trước khi kết thúc method có String:
+
+1. Chuỗi này có thể **`null`** không? Nếu có, kiểm tra trước khi gọi bất cứ method nào ngoài `equals`.
+2. Chuỗi này có thể **rỗng** không? Nếu có, `charAt`, `substring`, `split("")` cần guard.
+3. Tôi đang thao tác trên **String hay StringBuilder**? `String` không có `append`/`insert`/`delete`/`reverse`; `StringBuilder` không có `split`/`toUpperCase`/`matches`.
