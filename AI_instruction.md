@@ -52,10 +52,14 @@ Nếu một thay đổi lớn gồm nhiều phần độc lập, chia thành nhi
 
 ## 2. Cấu trúc repository
 
+Remote: `https://github.com/teafromhand-vn/phao-pro192` · nhánh chính: `main`.
+
 ```text
 Phao_PRO192.md    # Nội dung chính: cheat sheet PRO192
 AI_instruction.md # File này: quy tắc cho AI agent
 README.md         # Giới thiệu repository
+.gitattributes    # Chuẩn hóa LF cho file văn bản
+.gitignore        # Loại *.class và file build/IDE
 ```
 
 `Phao_PRO192.md` là **file nguồn duy nhất** của tài liệu. Không tạo bản sao, không tách thành nhiều file rời, không sinh thêm file `.txt`/`.pdf` thay thế nếu người dùng không yêu cầu.
