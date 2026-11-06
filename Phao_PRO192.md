@@ -305,6 +305,24 @@ public SpecialProduct(String name, int price, int quantity) {
 }
 ```
 
+**Java luôn tự chèn `super()` nếu constructor con không gọi `super(...)` ở dòng đầu.** Nghĩa là constructor này:
+
+```java
+public SpecialProduct(String name, int price, int quantity) {
+    this.quantity = quantity;   // Java chèn super(); ngay trước dòng này
+}
+```
+
+chỉ compile được khi lớp cha **có constructor không tham số**. Nếu cha chỉ có constructor có tham số thì lỗi:
+
+```text
+error: constructor Product in class Product cannot be applied to given types;
+    required: String,int
+    found:    no arguments
+```
+
+Quy tắc: **viết `super(...)` tường minh ở dòng đầu constructor con** khi lớp cha không chắc có constructor rỗng. Chi tiết ở mục 8.6.
+
 ## 2.5. Getter / Setter – mẫu và biến thể
 
 ```java
@@ -2003,6 +2021,22 @@ setType("new");
 String s = getType();
 ```
 
+**`super.field` cũng sai y như `this.field`.** Nhiều bạn nghĩ `super` "được phép" chạm vào `private`, nhưng không:
+
+```java
+super.type = "new";         // vẫn lỗi: type has private access in Parent
+String x = super.type;      // vẫn lỗi
+```
+
+`super` chỉ đổi cách chọn phiên bản method/constructor, **không đổi quyền truy cập**. Muốn đọc/ghi field `private` của cha thì bắt buộc đi qua getter/setter:
+
+```java
+super.setType("new");        // OK — gọi method public của cha
+String x = super.getType();  // OK
+```
+
+Khi lớp con **không** override `setType`, `super.setType(...)` và `setType(...)` cho cùng kết quả; viết `super.` chỉ có ý nghĩa phân biệt khi lớp con có override. Tương tự, `super.getId()` hợp lệ nhưng nếu lớp con không override `getId()` thì `getId()` là đủ.
+
 ## 8.4. Override toString
 
 Nối kết quả cha:
@@ -2031,6 +2065,75 @@ public String toString() {
 | có thể ở cùng một class | cần quan hệ kế thừa |
 | chọn method dựa trên tham số | method được quyết định theo object runtime |
 | ví dụ `print(int)` và `print(String)` | ví dụ subclass override `toString()` |
+
+## 8.6. Constructor con bắt buộc gọi constructor cha (super ngầm định)
+
+Đây là lỗi kế thừa hay bị bỏ sót nhất và **chỉ lộ ra khi chạy đúng bộ đề**, vì nó phụ thuộc vào lớp cha có constructor rỗng hay không.
+
+**Quy tắc của Java:** dòng đầu tiên của mọi constructor con **luôn** là một lời gọi constructor cha — `super(...)` hoặc `this(...)`. Nếu bạn không viết, Java **tự chèn `super()` không tham số**.
+
+```java
+public class Boss extends Employee {
+    private double extra;
+
+    public Boss(double extra) {
+        this.extra = extra;   // Java chèn super(); ngay trước dòng này
+    }
+}
+```
+
+Đoạn trên **chỉ compile được** khi `Employee` có `public Employee() {}`. Nếu lớp cha chỉ có constructor có tham số:
+
+```java
+public class Employee {
+    private String id;
+
+    public Employee(String id) { this.id = id; }
+    // không có Employee() rỗng
+}
+```
+
+thì `javac` báo:
+
+```text
+error: constructor Employee in class Employee cannot be applied to given types;
+    required: String
+    found:    no arguments
+    reason:   actual and formal argument lists differ in length
+```
+
+**Cách sửa — viết `super(...)` tường minh:**
+
+```java
+public Boss(double extra, int level) {
+    super();              // nếu cha có constructor rỗng
+    this.extra = extra;
+    this.level = level;
+}
+```
+
+hoặc, nếu cha không có constructor rỗng:
+
+```java
+public Boss(double extra, int level) {
+    super("", "", 0);     // truyền giá trị mặc định đúng kiểu của cha
+    this.extra = extra;
+    this.level = level;
+}
+```
+
+**Vì sao `super("", "", 0)` mà không phải `super()`?** Vì lớp cha không có constructor không tham số, buộc phải chọn một constructor có tham số và tự cung cấp giá trị mặc định. Giá trị mặc định phải đúng kiểu: `String` → `""`, số → `0`, `boolean` → `false`.
+
+**Thứ tự bắt buộc:** `super(...)` hoặc `this(...)` phải là **câu lệnh đầu tiên**, không được đặt sau một phép gán:
+
+```java
+public Boss(double extra) {
+    this.extra = extra;   // SAI nếu viết super(...) sau dòng này
+    super();              // error: call to super must be first statement
+}
+```
+
+**Viết `super(...)` tường minh luôn an toàn hơn** — nó không làm hỏng gì khi cha có constructor rỗng, và cứu bạn khi cha không có. Khi làm bài, mở file lớp cha xem constructor trước khi viết lớp con.
 
 ---
 
@@ -2739,6 +2842,7 @@ Một số PE instructions trong PDF bạn gửi nhấn mạnh:
 | `ClassNotFoundException` | cấu trúc/classpath/tên class | project và package |
 | `duplicate class` | có hai class cùng tên trong cùng package | không tạo file trùng |
 | `';' expected` | thiếu dấu chấm phẩy | dòng ngay trước vị trí báo lỗi |
+| `';' expected` / `not a statement` ngay trong dòng `return a + ", " b` | thiếu dấu `+` khi nối chuỗi — **không phải** thiếu `;` | đếm lại số `+` giữa các toán hạng |
 | `reached end of file while parsing` | thiếu dấu `}` | kiểm tra cặp ngoặc |
 
 ## 13.1. Lỗi index String
@@ -2791,6 +2895,38 @@ for (int i = t.size() - 1; i >= 0; i--) {
     if (condition) t.remove(i);
 }
 ```
+
+## 13.4. Lỗi thiếu dấu `+` khi nối chuỗi (báo sai là `';' expected`)
+
+Đây là lỗi gây hoang mang nhất: compiler **không** nói "thiếu dấu cộng", nó báo `';' expected` hoặc `not a statement` ngay tại chỗ thiếu `+`.
+
+Sai:
+
+```java
+return super.getId() + ", " super.getName() + ", " extra + ", " + level;
+```
+
+`javac` báo đúng tại dòng này:
+
+```text
+error: ';' expected
+error: not a statement
+error: ';' expected
+error: not a statement
+```
+
+Đúng — **mỗi** biên giữa hai toán hạng phải có một `+`:
+
+```java
+return super.getId() + ", " + super.getName() + ", "
+     + extra + ", " + level + ", " + getIncome();
+```
+
+Cách tự kiểm tra: đọc dòng `return` và đếm. Với `n` toán hạng phải có `n - 1` dấu `+`. Gặp `", "` rồi ngay sau là một biến/tên method mà không có `+` → đó chính là chỗ sai.
+
+**Đừng đi tìm dấu chấm phẩy ở dòng trước** khi thấy `';' expected` — trước hết nhìn dòng được báo: nếu dòng đó là một phép nối chuỗi dài, kiểm tra số dấu `+` trước.
+
+Liên quan: thứ tự cộng và nối chuỗi `+` — xem mục 60 (bảng `"1 + 2 + \"x\""`).
 
 ---
 
@@ -7925,6 +8061,72 @@ public double calculatePrice() {
     }
 
     return result;
+}
+```
+
+## Case 51.8 – Thu nhập theo bậc level (hệ số tháng lương)
+
+**English keywords:** `income`, `salary`, `level`, `multiplier`, `number of months`, `extra`, `bonus`.
+
+Đề dạng này cho superclass có `salary` và subclass có thêm `extra`, `level`; yêu cầu tính thu nhập = số tháng lương × salary + extra, với hệ số tháng lương phụ thuộc `level`.
+
+```java
+public double getIncome() {
+    double months;
+
+    if (level == 1) {
+        months = 12;
+    } else if (level == 2) {
+        months = 1.2 * 12;
+    } else {
+        months = 1.5 * 12;
+    }
+
+    return months * getSalary() + extra;
+}
+```
+
+Viết gọn tương đương (nhưng khó sửa hơn khi đề đổi hệ số):
+
+```java
+public double getIncome() {
+    if (level == 1) return 12 * getSalary() + extra;
+    if (level == 2) return 1.2 * 12 * getSalary() + extra;
+    return 1.5 * 12 * getSalary() + extra;
+}
+```
+
+**Ba điểm dễ sai:**
+
+1. **`else` bắt mọi giá trị còn lại**, kể cả `level = 0` hay số âm. Nếu đề ghi rõ ba mức `1`, `2`, `3` thì viết `else if (level == 3)` rồi mới tới nhánh dự phòng — và ghi chú nhánh dự phòng trả gì.
+2. **`1.2 * 12 * salary`** — nhân với `1.2` (kiểu `double`) trước hay sau không đổi kết quả, nhưng **không** được viết `12 * salary * 1.2` với `salary` là `int` nếu lo tràn `int` khi nhân trước. Với `salary` kiểu `double` thì không sao. Nếu `salary` là `int` và giá trị lớn, nhân `1.2` trước để chuyển sang `double` sớm.
+3. **Không dùng `super.getSalary()` nếu không cần** — `getSalary()` là đủ khi lớp con không override. Cả hai đều compile, nhưng `super.` chỉ nên dùng khi lớp con có override cùng tên.
+
+`toString()` đi kèm thường yêu cầu in cả `id`, `name`, `extra`, `level`, `income`. Chú ý **mỗi** biên phải có `+` (mục 13.4):
+
+```java
+@Override
+public String toString() {
+    return getId() + ", " + getName() + ", " + extra + ", "
+         + level + ", " + getIncome();
+}
+```
+
+Nếu sample in `12000000.0` mà đề muốn `12000000.00` thì thêm format — xem mục 61.
+
+**Cảnh báo số thực:** `1.2 * 12` trong Java cho `14.399999999999999`, không phải `14.4`. Nên `salary = 1000`, `extra = 500`, `level = 2` sẽ ra `14899.999999999998` chứ không phải `14900.0`. Nếu đề so khớp chuỗi output thì phải format:
+
+```java
+return String.format("%.2f", months * getSalary() + extra);  // "14900.00"
+```
+
+Viết `14.4` trực tiếp cũng tránh được phép nhân trung gian:
+
+```java
+} else if (level == 2) {
+    months = 14.4;
+} else {
+    months = 18.0;
 }
 ```
 
