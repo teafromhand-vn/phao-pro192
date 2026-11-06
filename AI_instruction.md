@@ -110,3 +110,15 @@ git push origin main
 Nếu có xung đột (conflict): đọc kỹ cả hai phía, giữ nội dung đúng, rồi `git rebase --continue`. Không dùng `--force` để "cho xong".
 
 Báo lại cho người dùng nếu không thể giải quyết mà không mất nội dung.
+
+## 7. Ghi chú vận hành
+
+- Remote: `origin` → `https://github.com/teafromhand-vn/phao-pro192.git`, nhánh `main`, visibility **public**.
+- Xác nhận trạng thái sau mỗi lần push:
+
+```sh
+git status -sb          # phải hiện "## main...origin/main" và không còn file
+git log --oneline -1
+```
+
+- Không có CI/CD, không có build step, không có test runner. Tài liệu là Markdown thuần; kiểm tra bằng cách đọc `git diff` và render thử trên GitHub.
