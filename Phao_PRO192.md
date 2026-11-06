@@ -37,6 +37,7 @@
 18. [Bổ sung biến thể kế thừa và kiểm tra cú pháp](#58-bổ-sung-biến-thể-kế-thừa-và-kiểm-tra-cú-pháp)
 19. [Độ dài chuỗi – toàn bộ thao tác](#59-độ-dài-chuỗi-string-length--toàn-bộ-thao-tác)
 20. [String – atlas toàn bộ method](#60-string--atlas-toàn-bộ-method)
+21. [Import cho parameter và return theo yêu cầu đề (formatted / rounded / percent)](#61-import-cho-parameter-và-return-theo-yêu-cầu-đề-formatted--rounded--percent)
 
 ---
 
@@ -2211,6 +2212,8 @@ Ví dụ:
 ```java
 String s = String.format("%.2f", 7.5); // "7.50"
 ```
+
+Nếu đề yêu cầu `rounded to 2 decimal places` mà method trả `double`, xem mục 61.5: `Math.round(x * 100.0) / 100.0`.
 
 Nếu đề ghi `Do not format the result`, không dùng formatting trừ khi một field riêng được yêu cầu format.
 
@@ -5300,6 +5303,12 @@ public int[] getEvenNumbers(int[] a) {
 | `Map` | `import java.util.Map;` |
 | `HashMap` | `import java.util.HashMap;` |
 | `TreeMap` | `import java.util.TreeMap;` |
+| `Map.Entry` viết đầy đủ (`Map.Entry<K,V>`) | Chỉ cần `import java.util.Map;` |
+| `Entry` viết tắt | `import java.util.Map.Entry;` |
+| `Locale` (format số ổn định dấu `.`) | `import java.util.Locale;` |
+| `DecimalFormat` | `import java.text.DecimalFormat;` |
+| `BigDecimal` (làm tròn chính xác) | `import java.math.BigDecimal;` |
+| `RoundingMode` | `import java.math.RoundingMode;` |
 | `StringBuilder` | Không cần import (`java.lang`) |
 | `Math` | Không cần import (`java.lang`) |
 | `String` | Không cần import (`java.lang`) |
@@ -5307,6 +5316,8 @@ public int[] getEvenNumbers(int[] a) {
 | `Integer` | Không cần import (`java.lang`) |
 
 `java.lang` được import tự động. Các class trong `java.util` không được import tự động.
+
+Bảng tra đầy đủ theo parameter/return (kèm `Locale`, `DecimalFormat`, `BigDecimal`) ở **mục 61.2**.
 
 ---
 
@@ -5383,6 +5394,9 @@ Ví dụ yêu cầu “count the number of different digits in each word”:
 | return a Product object | `public Product f(...)` |
 | return a list of Product objects | `public List<Product> f(...)` |
 | perform an action / update / remove, no result | `public void f(...)` |
+| return ... **formatted to 2 decimal places** | `public String f(...)` + `String.format("%.2f", x)` → mục 61 |
+| return ... **rounded to 2 decimal places** | `public double f(...)` + `Math.round(x * 100.0) / 100.0` → mục 61 |
+| return ... **as a percentage** | `public String f(...)` + `String.format("%.2f%%", pct)` → mục 61 |
 
 Ví dụ nhận một String và trả về số lượng chữ số:
 
@@ -6664,6 +6678,8 @@ public String toString() {
 ```
 
 Nếu `price` là `double`, output `12.5` sẽ thành `12.50`.
+
+Không có `Locale.US` vẫn đúng khi máy để locale `en_US`; nếu máy để `vi_VN`, thêm `import java.util.Locale;` rồi dùng `String.format(Locale.US, "%.2f", price)`. Xem mục 61 để chọn đúng `formatted` vs `rounded` vs `truncated`.
 
 ---
 
@@ -8111,9 +8127,27 @@ for (int i = 0; i < n; i++) {
 
 ## Case 55.1 – Format double to two decimal places
 
+Dùng khi method trả `String`:
+
 ```java
 public String formatPrice(double price) {
     return String.format("%.2f", price);
+}
+```
+
+Dùng khi method trả `double` (đề ghi `rounded`, không phải `formatted`):
+
+```java
+public double roundPrice(double price) {
+    return Math.round(price * 100.0) / 100.0;
+}
+```
+
+Dùng khi method trả `double` và đề ghi `truncated`:
+
+```java
+public double truncatePrice(double price) {
+    return (int) (price * 100) / 100.0;
 }
 ```
 
@@ -9937,3 +9971,301 @@ Ba câu tự hỏi trước khi kết thúc method có String:
 1. Chuỗi này có thể **`null`** không? Nếu có, kiểm tra trước khi gọi bất cứ method nào ngoài `equals`.
 2. Chuỗi này có thể **rỗng** không? Nếu có, `charAt`, `substring`, `split("")` cần guard.
 3. Tôi đang thao tác trên **String hay StringBuilder**? `String` không có `append`/`insert`/`delete`/`reverse`; `StringBuilder` không có `split`/`toUpperCase`/`matches`.
+
+---
+
+# 61. IMPORT CHO PARAMETER VÀ RETURN THEO YÊU CẦU ĐỀ (FORMATTED / ROUNDED / PERCENT)
+
+> Mục này trả lời đúng hai câu hỏi hay bị mất điểm:
+>
+> 1. **Parameter của method là kiểu gì → phải import gì?**
+> 2. **Đề ghi `formatted to 2 decimal places` / `rounded to 2 decimal places` / `as a percentage` → return kiểu gì, viết dòng lệnh nào?**
+>
+> Toàn bộ output trong mục này đã chạy bằng JDK 1.8 (`javac 1.8.0_504`).
+
+## 61.1. Đọc yêu cầu trước khi viết dòng `return`
+
+| Cụm trong đề | Nghĩa | Return type phải khai | Câu lệnh |
+|---|---|---|---|
+| `formatted to 2 decimal places` | trả về **chuỗi** đã format | `String` | `String.format("%.2f", x)` |
+| `format the result` / `in the format "..."` | trả về **chuỗi** theo mẫu | `String` | `String.format(...)` / nối `+` |
+| `rounded to 2 decimal places` | trả về **số** đã làm tròn | `double` | `Math.round(x * 100.0) / 100.0` |
+| `as a percentage` / `with a percent sign` | trả **chuỗi** có `%` | `String` | `String.format("%.2f%%", pct)` |
+| `truncated to 2 decimal places` | **cắt bỏ** phần dư, không làm tròn | `double` | `(int) (x * 100) / 100.0` |
+| `do not format the result` | trả số nguyên trạng | theo signature | `return x;` — không `String.format` |
+| `return the price with 2 decimals` trong `toString` | chuỗi hiển thị | `String` | `name + "," + String.format("%.2f", price)` |
+
+**Nguyên tắc bất di bất dịch:** return type phải **khớp đúng signature đề cho**. Đề ghi `public double getPrice()` thì dù có chữ `formatted`, vẫn phải trả `double` — dùng nhánh `rounded`, không trả `String`.
+
+## 61.2. Bảng import theo parameter (và theo return)
+
+| Parameter / return cần dùng | Import bắt buộc |
+|---|---|
+| `List<Product>`, `List<String>` | `import java.util.List;` |
+| `new ArrayList<>()` trong method | `import java.util.ArrayList;` |
+| `Map<K, V>` | `import java.util.Map;` |
+| `new HashMap<>()` | `import java.util.HashMap;` |
+| `new TreeMap<>()` (tự sort key) | `import java.util.TreeMap;` |
+| `for (Map.Entry<K,V> e : m.entrySet())` | `import java.util.Map;` (viết `Map.Entry`) |
+| `for (Entry<K,V> e : m.entrySet())` | `import java.util.Map.Entry;` |
+| `Set<T>`, `new HashSet<>()` | `import java.util.Set;` + `import java.util.HashSet;` |
+| `new LinkedHashSet<>()` (giữ thứ tự) | `import java.util.LinkedHashSet;` |
+| `Comparator<Product>` | `import java.util.Comparator;` |
+| `Collections.sort(...)` / `reverse` | `import java.util.Collections;` |
+| `Iterator<T>` | `import java.util.Iterator;` |
+| `Arrays.toString(a)` / `Arrays.sort(a)` | `import java.util.Arrays;` |
+| `Scanner sc = new Scanner(System.in)` | `import java.util.Scanner;` |
+| `String.format(Locale.US, ...)` | `import java.util.Locale;` |
+| `new DecimalFormat("0.00")` | `import java.text.DecimalFormat;` |
+| `new BigDecimal(...)`, `RoundingMode.HALF_UP` | `import java.math.BigDecimal;` + `import java.math.RoundingMode;` |
+| `String`, `Math`, `StringBuilder`, `Character`, `Integer`, `Double` | **không cần import** (`java.lang`) |
+
+Parameter là **mảng** (`int[] a`, `String[] words`, `Product[] p`) thì **không cần import gì thêm**.
+
+Parameter là **interface** do đề cung cấp (`IMyInterface`, `IShape`) thì **không import** — cùng default package.
+
+## 61.3. Parameter kiểu số: đề cho `int` nhưng cần `double`
+
+Đây là lỗi format hay gặp nhất: `%f` / `%.2f` **chỉ nhận** `double`, `Double`, `float`, `Float`. Truyền `int`/`Integer`/`long` vào sẽ ném `IllegalFormatConversionException` ngay khi chạy.
+
+```java
+int n = 7;
+int q = 3;
+
+String.format("%.2f", (double) n);   // "7.00"  - phải cast
+String.format("%.2f", 1.0 * n / q);  // "2.33"  - nhân 1.0 để thành double
+String.format("%.2f", n / 2.0);      // "3.50"  - mẫu là double
+```
+
+Ba trường hợp **sai** (đã kiểm chứng, đều ném exception):
+
+```java
+String.format("%.2f", 2 / 3);            // IllegalFormatConversionException
+String.format("%.2f", Integer.valueOf(5)); // IllegalFormatConversionException
+System.out.printf("%.2f", 5);            // IllegalFormatConversionException
+```
+
+Ngược lại `%d` chỉ nhận số nguyên: `String.format("%d", 12.5)` cũng ném exception.
+
+## 61.4. Return `String` – formatted
+
+```java
+public String formatPrice(double price) {
+    return String.format("%.2f", price);
+}
+```
+
+| Input | Output |
+|---|---|
+| `12.5` | `"12.50"` |
+| `7.456` | `"7.46"` |
+| `2.675` | `"2.68"` |
+| `0.0` | `"0.00"` |
+| `100.0` | `"100.00"` |
+| `-1.239` | `"-1.24"` |
+| `Double.NaN` | `"NaN"` |
+| `1.0 / 3` | `"0.33"` |
+
+Format **tự động thêm số 0** cho đủ 2 chữ số, nên `12.5` thành `"12.50"` — khác `String.valueOf(12.5)` cho `"12.5"` và `12.5 + ""` cho `"12.5"`.
+
+### Nhiều chữ số thập phân theo đề
+
+| Đề ghi | Format |
+|---|---|
+| `1 decimal place` | `"%.1f"` → `2.25` thành `"2.3"` |
+| `2 decimal places` | `"%.2f"` |
+| `3 decimal places` | `"%.3f"` → `1.0 / 3` thành `"0.333"` |
+| `no decimal places` / `as an integer` | `"%.0f"` → `2.5` thành `"3"`, `3.5` thành `"4"` |
+| `with a thousands separator` | `"%,.2f"` → `1234567.891` thành `"1,234,567.89"` |
+| `in percent` | `"%.2f%%"` → `0.875` thành `"0.88%"` |
+
+### Locale – bẫy dấu phẩy thay dấu chấm
+
+`String.format` dùng **Locale mặc định của máy**. Máy cài `vi_VN` sẽ in `12,50` thay vì `12.50`, và `1.234.567,89` thay vì `1,234,567.89` — sai hoàn toàn so với sample của đề.
+
+```java
+import java.util.Locale;
+
+String.format(Locale.US, "%.2f", 12.5);   // "12.50" - luôn đúng
+String.format(Locale.US, "%,.2f", 1234567.891); // "1,234,567.89"
+```
+
+Nếu đề **không** cho phép thêm import hoặc bạn muốn code ngắn, dùng `String.format("%.2f", x)` và kiểm tra máy phòng thi đang để locale `en_US`. An toàn nhất: thêm `import java.util.Locale;` và dùng `Locale.US`.
+
+## 61.5. Return `double` – rounded / truncated
+
+Đề cho signature `public double ...` mà yêu cầu `rounded to 2 decimal places` thì **không** dùng `String.format` (kết quả là `String`, không gán được vào `double`).
+
+### Làm tròn (rounded)
+
+```java
+public double roundPrice(double price) {
+    return Math.round(price * 100.0) / 100.0;
+}
+```
+
+| Input | Output |
+|---|---|
+| `12.345` | `12.35` |
+| `2.675` | `2.68` |
+| `1.239` | `1.24` |
+| `1.234` | `1.23` |
+| `-1.236` | `-1.24` |
+| `-1.234` | `-1.23` |
+
+`Math.round` trả `long`, chia cho `100.0` (double) nên kết quả vẫn là `double`. Nếu chia `100` (int) thì mất phần thập phân.
+
+### Cắt bỏ (truncated / remove the decimal part)
+
+```java
+public double truncatePrice(double price) {
+    return (int) (price * 100) / 100.0;
+}
+```
+
+| Input | Output |
+|---|---|
+| `1.239` | `1.23` |
+| `1.999` | `1.99` |
+| `-1.239` | `-1.23` |
+
+Ép `(int)` cắt về 0 (không làm tròn), nên `(int) 2.9` là `2`, không phải `3`.
+
+### Làm tròn chính xác kiểu half-up (khi đề kiểm tra đúng số lẻ)
+
+`Math.round(x * 100.0)` bị ảnh hưởng sai số nhị phân: `1.005 * 100` thực ra là `100.49999999999999` nên cho `1.0` thay vì `1.01`. Nếu đề có case `.005`, dùng `BigDecimal`:
+
+```java
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+public double roundPrice(double price) {
+    return new BigDecimal(String.valueOf(price))
+            .setScale(2, RoundingMode.HALF_UP)
+            .doubleValue();
+}
+```
+
+| Input | `Math.round` path | `BigDecimal` HALF_UP | `String.format` |
+|---|---|---|---|
+| `1.005` | `1.0` ❌ | `1.01` ✅ | `"1.01"` ✅ |
+| `2.675` | `2.68` | `2.68` | `"2.68"` |
+| `8.835` | `8.84` | `8.84` | `"8.84"` |
+
+Lưu ý: `new BigDecimal(price)` (nhận `double`) **không** sửa được lỗi này; phải truyền `String.valueOf(price)`.
+
+## 61.6. `String.format` vs `DecimalFormat`
+
+| | `String.format("%.2f", x)` | `new DecimalFormat("0.00")` |
+|---|---|---|
+| Import | `java.util.Locale` (nếu dùng Locale) | `java.text.DecimalFormat` |
+| Kết quả | `String` | `String` |
+| `12.5` | `"12.50"` | `"12.50"` |
+| `2.5` với `"#.##"` | — | `"2.5"` (không đệm 0) |
+| `2.675`, chế độ mặc định | `"2.68"` | `"2.67"` (mặc định `HALF_EVEN`) |
+| Khi nào dùng | **mặc định trong đề** | cần mẫu tuỳ biến / không đệm 0 |
+
+`DecimalFormat` mặc định làm tròn **half-even** (ngân hàng), nên `2.675` ra `"2.67"`. Muốn giống `String.format` thì phải `df.setRoundingMode(RoundingMode.HALF_UP)` — mà lúc đó `2.675` vẫn ra `"2.67"` vì lý do nhị phân như trên. **Trong phòng thi, `String.format` là lựa chọn an toàn nhất.**
+
+## 61.7. Return `String` cho phần trăm
+
+```java
+public String getPercentage(List<Product> t) {
+    if (t == null || t.isEmpty()) {
+        return String.format("%.2f%%", 0.0);
+    }
+
+    int count = 0;
+    for (Product p : t) {
+        if (p.getPrice() > 10) {
+            count++;
+        }
+    }
+
+    double percent = count * 100.0 / t.size();
+    return String.format("%.2f%%", percent);
+}
+```
+
+`%%` in ra một dấu `%`. Với list 3 sản phẩm có 2 sản phẩm thoả: `"66.67%"`.
+
+Ba lỗi thường gặp:
+
+```java
+count / t.size() * 100;              // int / int → 0, rồi mới * 100 = 0
+count * 100 / t.size();              // int division → mất phần lẻ
+1.0 * count / t.size() * 100;        // ✅ 66.66666...
+String.format("%.2f", percent);      // thiếu %% → "66.67"
+```
+
+## 61.8. Method hoàn chỉnh: tổng tiền + số lượng chữ số thập phân
+
+```java
+import java.util.List;
+import java.util.Locale;
+
+public class Order {
+
+    public String getTotal(List<Product> t) {
+        if (t == null || t.isEmpty()) {
+            return String.format(Locale.US, "%.2f", 0.0);
+        }
+
+        double total = 0.0;
+        for (Product p : t) {
+            total += p.getPrice() * p.getQuantity();
+        }
+
+        return String.format(Locale.US, "%.2f", total);
+    }
+}
+```
+
+Với `Pen 2.5 × 3`, `Book 20.456 × 1`, `Bag 15.0 × 2` → `"57.96"`.
+
+## 61.9. `toString` có format
+
+```java
+import java.util.Locale;
+
+@Override
+public String toString() {
+    return name + "," + String.format(Locale.US, "%.2f", price) + "," + quantity;
+}
+```
+
+`Book, 20.456, 1` → `"Book,20.46,1"`.
+
+Lưu ý: `String.format` trả `String`, nên nối bằng `+` với `int` (`quantity`) vẫn đúng — không cần `String.valueOf`.
+
+Nếu đề mẫu in `Book, 20.46, 1` (có space) thì thêm space vào chuỗi nối, **không** thêm vào format:
+
+```java
+return name + ", " + String.format(Locale.US, "%.2f", price) + ", " + quantity;
+```
+
+## 61.10. Số nguyên: `int` và `long` không có chữ số thập phân
+
+Nếu field là `int price` mà đề vẫn ghi `formatted to 2 decimal places`, phải đổi sang `double` khi format:
+
+```java
+String.format("%.2f", (double) price);   // 42 → "42.00"
+String.format("%d", price);              // 42 → "42"
+```
+
+Nếu signature cố định là `public int getPrice()` thì **trả `int`** và bỏ qua yêu cầu format — đề tự mâu thuẫn, giữ đúng signature.
+
+## 61.11. Checklist trước khi nộp
+
+| Kiểm tra | Đúng | Sai |
+|---|---|---|
+| Signature đề cho `double` mà yêu cầu format | `Math.round(x*100.0)/100.0` | `return String.format(...)` |
+| Signature đề cho `String` mà yêu cầu format | `return String.format("%.2f", x);` | `return x;` |
+| Truyền `int` vào `%.2f` | `String.format("%.2f", (double) n)` | `String.format("%.2f", n)` |
+| Đếm phần trăm | `count * 100.0 / size` | `count / size * 100` |
+| In dấu `%` | `"%.2f%%"` | `"%.2f%"` → `UnknownFormatConversionException` |
+| Format trong `toString` | `name + "," + String.format("%.2f", p)` | `name + "," + p` (ra `12.5`) |
+| `Math.round` trả gì | `long` → cần `(int)` nếu return `int` | gán thẳng vào `int` |
+| Máy để locale khác | thêm `Locale.US` | tin vào locale mặc định |
+| Đề ghi `do not format` | `return x;` | thêm `String.format` |
+| Import khi dùng `String.format(Locale.US, ...)` | `import java.util.Locale;` | quên import → `cannot find symbol` |

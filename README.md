@@ -10,6 +10,7 @@ Cheat sheet tra cứu cho bài thi thực hành **PRO192 (Java)** theo hướng 
 - Scanner, format output, StringBuilder, lỗi compile/runtime thường gặp.
 - Boundary tests, checklist phòng thi, Case Cookbook.
 - **Mục 59: Độ dài chuỗi (`String.length()`) – toàn bộ thao tác.**
+- **Mục 61: Import cho parameter/return và format `formatted` / `rounded` / `truncated` / percent.**
 
 Mọi mã Java trong tài liệu ưu tiên cú pháp **Java 8 / JDK 1.8**.
 
