@@ -3,25 +3,33 @@
 > File này dành cho mọi AI agent (Claude, Copilot, Cursor, Codex…) làm việc trong repo.
 > Đọc hết trước khi sửa bất kỳ file nào.
 
-## 1. Quy tắc bắt buộc: commit và push MỖI thay đổi
+## 1. Quy tắc bắt buộc: cập nhật từ GitHub → commit → push MỖI thay đổi
 
 Đây là quy tắc quan trọng nhất của repo. Không có ngoại lệ.
 
 Sau **mỗi** thay đổi nội dung (thêm mục, sửa công thức, viết lại đoạn văn, sửa lỗi chính tả, đổi code mẫu…), agent phải:
 
-1. `git add` đúng các file vừa sửa.
-2. `git commit` với message mô tả thay đổi.
-3. `git push` lên `origin main`.
-4. Chỉ sau khi push thành công mới được coi là hoàn thành nhiệm vụ.
+1. **Lấy bản mới nhất từ GitHub về trước** — chưa pull thì chưa được commit/push.
+2. `git add` đúng các file vừa sửa.
+3. `git commit` với message mô tả thay đổi.
+4. `git push` lên `origin main`.
+5. Chỉ sau khi push thành công mới được coi là hoàn thành nhiệm vụ.
+
+Thứ tự bắt buộc là **pull trước, commit/push sau**. Nếu pull về mà có thay đổi mới của người khác chạm vào đúng đoạn đang sửa, đọc lại và hòa nội dung trước khi commit — không ghi đè mù quáng.
 
 ```sh
+git pull --rebase origin main   # cập nhật từ GitHub về trước
 git add Phao_PRO192.md
 git commit -m "Add String.length() operation atlas"
 git push origin main
 ```
 
+Nếu working tree đang có file chưa commit, `git stash` → `git pull --rebase origin main` → `git stash pop` rồi mới add/commit.
+
 ### Không được làm
 
+- Không commit/push khi chưa pull bản mới nhất từ `origin main`.
+- Không commit/push dựa trên trạng thái remote đã lỗi thời (đã lâu không fetch/pull).
 - Không gộp nhiều thay đổi không liên quan vào một commit.
 - Không để thay đổi nằm ở working tree qua lượt trả lời tiếp theo.
 - Không dùng `git commit --amend` hoặc `git push --force` lên `main` nếu chưa được người dùng cho phép rõ ràng.
@@ -33,6 +41,7 @@ git push origin main
 ```sh
 git status            # xem file nào sẽ vào commit
 git diff              # đọc lại đúng nội dung đã sửa
+git log --oneline -3  # xác nhận đã có commit mới nhất từ origin sau khi pull
 ```
 
 Nếu `git diff` không đúng như ý định thì sửa lại trước, đừng commit rồi mới sửa.
@@ -101,6 +110,8 @@ Chỉ dán vào tài liệu những đoạn đã chạy đúng, hoặc ghi rõ l
 - Nếu thấy nội dung sai, báo lại và đề xuất sửa — không tự sửa những chỗ ngoài yêu cầu.
 
 ## 6. Xử lý khi push thất bại
+
+Push bị từ chối thường vì remote đã có commit mới. Xử lý:
 
 ```sh
 git pull --rebase origin main
