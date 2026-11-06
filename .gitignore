@@ -1,0 +1,33 @@
+# Compiled Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Build output
+out/
+build/
+target/
+bin/
+dist/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/private/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+*.tmp
+*.log
+~$*
