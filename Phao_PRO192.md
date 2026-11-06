@@ -171,7 +171,7 @@
 
 | Keyword | Nghĩa | Java |
 |---|---|---|
-| field / attribute | thuộc tính | biến khai báo trong class |
+| field / attribute | thuộc tính | biến khai báo trong class — cú pháp đầy đủ ở mục 31.16 |
 | constructor | hàm khởi tạo | tên trùng class, không return type |
 | default constructor | constructor không tham số | `ClassName()` |
 | parameterized constructor | constructor có tham số | `ClassName(args)` |
@@ -4244,6 +4244,7 @@ s.split("\\.");  // đúng: tách theo dấu chấm
 | Keyword đề bài | Nghĩa | Bạn cần viết |
 |---|---|---|
 | declare a variable | khai báo biến | `type name;` |
+| declare the attributes / fields | khai báo thuộc tính của class | `modifier type name;` trong class — mục 31.16 |
 | initialize a variable | khai báo và gán giá trị ban đầu | `type name = value;` |
 | assign a value | gán giá trị | `name = value;` |
 | declare a constant | khai báo hằng | `final type NAME = value;` |
@@ -4749,6 +4750,212 @@ import java.util.*;
 ```
 
 Trong các PE mẫu có instruction yêu cầu không dùng package/default package. Nếu đề ghi như vậy thì **không thêm dòng `package ...;`**.
+
+## 31.16. Khai báo thuộc tính trong class (attribute / field)
+
+**English keywords:** `attribute`, `attributes`, `field`, `fields`, `properties`, `member variables`, `instance variables`, `declare the following attributes`, `with the following fields`.
+
+**Ý nghĩa:** đề cho một danh sách thuộc tính (thường ở dạng bảng UML hoặc câu liệt kê) và yêu cầu khai báo chúng **bên trong class**, ngoài tất cả constructor và method. Thuộc tính là biến gắn với object → mỗi object có bản sao riêng.
+
+### Cú pháp đầy đủ
+
+```text
+[accessModifier] [static] [final] type attributeName [= initialValue];
+```
+
+| Thành phần | Bắt buộc? | Ví dụ |
+|---|---|---|
+| `accessModifier` | không (mặc định là package-private) | `public`, `private`, `protected` |
+| `static` | chỉ khi đề nói dùng chung cho mọi object | `public static int count;` |
+| `final` | chỉ khi là hằng, không gán lại | `public static final int MAX = 100;` |
+| `type` | **bắt buộc** | `int`, `double`, `boolean`, `char`, `String`, `Product`, `List<String>` |
+| `attributeName` | **bắt buộc** | `price`, `title`, `quantity` |
+| `= initialValue` | không (field có giá trị mặc định của Java, xem 31.3) | `= 0`, `= ""`, `= new ArrayList<>()` |
+
+### Mẫu khai báo theo kiểu dữ liệu
+
+```java
+public class Book {
+
+    public int price;            // số nguyên
+    public String title;         // chuỗi
+    public double rating;        // số thực
+    public boolean inStock;      // đúng/sai
+    public char code;            // một ký tự
+    public int quantity;
+    public String[] tags;        // mảng
+    public List<String> authors = new ArrayList<>(); // collection
+
+}
+```
+
+| Kiểu | Khai báo mẫu | Giá trị mặc định khi không gán |
+|---|---|---|
+| `int` | `public int price;` | `0` |
+| `long` | `public long views;` | `0L` |
+| `double` | `public double rating;` | `0.0` |
+| `float` | `public float rate;` | `0.0f` |
+| `boolean` | `public boolean inStock;` | `false` |
+| `char` | `public char code;` | `'\u0000'` |
+| `String` | `public String title;` | `null` (không phải `""`) |
+| array | `public String[] tags;` | `null` (không phải mảng rỗng) |
+| object | `public Product owner;` | `null` |
+| `List` | `public List<String> authors = new ArrayList<>();` | phải `new` mới dùng được |
+
+**Rất hay mất điểm:** `String` và mảng mặc định là `null`. Nếu đề muốn `""` hoặc mảng rỗng thì phải tự gán, tốt nhất là trong default constructor (case 46.2):
+
+```java
+public Book() {
+    title = "";
+    tags = new String[0];
+}
+```
+
+### Nhiều thuộc tính cùng kiểu
+
+```java
+public int price, quantity, sold;
+public String title, author;
+```
+
+Chỉ được gộp khi **cùng kiểu**. Không viết `public int price, String title;` — lỗi compile.
+
+### Access modifier – chọn cái nào
+
+| Modifier | Ai đọc/ghi được | Khi nào dùng |
+|---|---|---|
+| `public` | mọi nơi | đề ghi `+price` trong UML, hoặc đề nói "attributes are public" |
+| `private` | chỉ trong class đó | mặc định của bài OOP; đề ghi `-price`; đề có getter/setter |
+| `protected` | class đó + lớp con + cùng package | đề ghi `#price`; thường gặp ở bài kế thừa |
+| (không ghi) | cùng package | hầu như không xuất hiện trong đề PE |
+
+```java
+public class Product {
+
+    private String name;   // UML: -name: String
+    private int price;     // UML: -price: int
+    public int quantity;   // UML: +quantity: int
+    protected int stock;   // UML: #stock: int
+
+}
+```
+
+Đọc UML: `-` → `private`, `+` → `public`, `#` → `protected`. Chữ **in nghiêng/gạch chân** trong UML nghĩa là `static`/`abstract`, không phải kiểu dữ liệu.
+
+**Chọn nhanh:**
+- Đề có nhắc `getter`, `setter`, `accessor`, `mutator` → field nên `private`, truy cập qua method.
+- Đề ghi rõ `public int price;` hoặc yêu cầu "public attributes" → giữ `public`, **không** tự đổi thành `private` rồi thêm getter/setter (đổi signature là mất điểm tự động).
+- Đề không nói gì → `private` là lựa chọn an toàn cho bài OOP; nhưng nếu code test của đề truy cập `obj.price` trực tiếp thì phải để `public`.
+
+### Thuộc tính `static` và hằng `static final`
+
+```java
+public static int createdCount;             // dùng chung cho mọi object
+public static final int MAX_PRICE = 1000;   // hằng: không gán lại
+```
+
+- `static` field: mọi object nhìn thấy **một** biến duy nhất. Dùng khi đề nói `shared by all objects`, `count the number of created objects`.
+- `final` field: gán lần đầu là xong, không gán lại được.
+- Quy ước tên hằng: chữ hoa + `_`.
+- Không cần `static` nếu đề chỉ nói `attribute`/`field` bình thường.
+
+### Thuộc tính vs biến local
+
+| | Attribute (field) | Local variable |
+|---|---|---|
+| Khai báo ở đâu | trong class, ngoài method | trong method/constructor |
+| Có giá trị mặc định? | **có** (`0`, `false`, `null`) | **không** — phải gán trước khi đọc |
+| Phạm vi | cả class, truy cập qua `object.field` hoặc `field` | chỉ trong block khai báo |
+| Có `static`/access modifier? | có | không |
+
+```java
+public class Demo {
+    private int count;      // attribute: tự có giá trị 0
+
+    public void run() {
+        int total;          // local: chưa có giá trị
+        total = 0;          // phải gán trước
+        count++;
+        System.out.println(count + " " + total);
+    }
+}
+```
+
+### Trùng tên attribute với tham số
+
+```java
+public void setPrice(int price) {
+    this.price = price;    // this.price = field, price = tham số
+}
+```
+
+Không có `this.` thì `price = price;` gán tham số cho chính nó — field giữ nguyên giá trị cũ, **không báo lỗi compile**, chỉ sai kết quả. Đây là lỗi im lặng nguy hiểm nhất khi viết attribute + setter.
+
+### Lỗi thường gặp khi khai báo attribute
+
+| Viết | Vấn đề | Sửa |
+|---|---|---|
+| `public price;` | thiếu kiểu | `public int price;` |
+| `public int price, String title;` | trộn kiểu trong một câu lệnh | tách hai dòng |
+| `public void price;` | `void` chỉ dùng cho method | `public int price;` |
+| Khai báo field bên trong method | thành local variable, object khác không thấy | đưa ra ngoài, ngay dưới dòng `class ... {` |
+| Dấu `;` sau dấu `}` của class | thừa, không sai nhưng lạ | bỏ đi |
+| `private` mà đề test đọc `obj.price` | lỗi compile ở code test | để `public` nếu đề yêu cầu |
+| `public static final int MAX;` | hằng chưa gán | `= 1000;` ngay khi khai báo |
+
+### Thứ tự viết trong class
+
+```java
+public class Book {
+
+    // 1. attributes
+    private String title;
+    private int price;
+    private int quantity;
+    public static int createdCount;
+
+    // 2. constructors
+    public Book() {
+        title = "";
+    }
+
+    public Book(String title, int price, int quantity) {
+        this.title = title;
+        this.price = price;
+        this.quantity = quantity;
+    }
+
+    // 3. getters / setters
+    public int getPrice() {
+        return price;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
+    }
+
+    // 4. business methods
+    public int getTotal() {
+        return price * quantity;
+    }
+
+    // 5. toString
+    @Override
+    public String toString() {
+        return title + "," + price + "," + quantity;
+    }
+}
+```
+
+Thứ tự này không bắt buộc với compiler nhưng là kiểu trình bày của đề mẫu và giúp bạn không bỏ sót phần nào. NetBeans generate code cũng theo thứ tự này (mục 2.3).
+
+### Kiểm tra nhanh trước khi chuyển sang constructor
+
+1. Đã khai báo **đủ và đúng thứ tự** các attribute đề liệt kê chưa?
+2. Kiểu dữ liệu có khớp đề không (`int` vs `double` — sai kiểu là sai `toString` output)?
+3. Field `String`/mảng/object cần `""`/`new` thay vì `null` không?
+4. Có attribute nào đề ghi `static` hoặc là hằng không?
+5. Tên attribute có trùng tên tham số constructor/setter không → nhớ `this.`?
 
 ---
 
@@ -6362,6 +6569,8 @@ public class Product {
 ```
 
 Nếu đề cho `-name: String`, dấu `-` tương ứng `private`. Nếu đề cho `+name`, tương ứng `public`, nhưng field trong các bài OOP thường là private.
+
+Chi tiết đầy đủ về khai báo attribute (kiểu dữ liệu, access modifier, `static`/`final`, giá trị mặc định, lỗi thường gặp): xem **mục 31.16**.
 
 ## Case 46.2 – Default constructor
 
